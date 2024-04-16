@@ -1,4 +1,4 @@
-% File name: cacc_test_01.m
+% File name: test_02_cacc.m
 % Author: Phat Do
 % Apr 2024
 % Description: The application of structured H infinity control synthesis 
@@ -31,7 +31,7 @@ G2 = ss(A,B2,C,D); G2.u = {'x1(2)','u2'}; G2.y = {'x2'};
 G3 = ss(A,B3,C,D); G3.u = {'x2(2)','u3'}; G3.y = {'x3'};
 
 %% Tunable gains
-Ke_max = 500;
+Ke_max = 600;
 Ke_min = 400;
 
 K11 = tunableGain('K11',1,1); K11.u = 'y1(1)'; K11.y = 'u11';
@@ -63,10 +63,9 @@ K32 = tunableGain('K32',0); K32.u = 'y3(2)'; K32.y = 'u32';
 sum_u3 = sumblk('u3=u31+u32');
 
 %% Desired performance by weighting functions
-% Design of weighting function on ei
-% Ms=1;wb=5;epsi=1e-4;
-We_param = [1 1 1e-4];
-We_e1=tf([1/We_param(1) We_param(2)],[1 We_param(2)*We_param(3)]);
+% Weighting function on ei
+Ms=1; wb=1; epsi=1e-4;
+We_e1=tf([1/Ms wb],[1 wb*epsi]);
 We_e2=We_e1;
 We_e3=We_e1;
 
@@ -74,38 +73,20 @@ We_e3=We_e1;
 Ms=1;wb=0.5;epsi=0.001;
 We_v=tf([1/Ms wb],[1 wb*epsi]);
 
-We1 = blkdiag(We_e1,We_v);
-We1.u = {'y1(1)','y1(2)'};
-We1.y = 'z1';
-
-We2 = blkdiag(We_e2,We_v);
-We2.u = {'y2(1)','y2(2)'};
-We2.y = 'z2';
-
-We3 = blkdiag(We_e3,We_v);
-We3.u = {'y3(1)','y3(2)'};
-We3.y = 'z3';
-
 % Weighting function on ui
-Mu=1e2;wbc=10000;epsi1=0.01;
-% Wu0=tf([1 wbc/Mu],[epsi1 wbc]);
-Mu1=1e3;Mu2=1e3;Mu3=1e3;
-Wu1 = tf(1/Mu1);
-Wu2 = tf(1/Mu2);
-Wu3 = tf(1/Mu3);
-Wu_e = blkdiag(Wu1,Wu2,Wu3);
-Wu_e.u = {'u11','u21','u31'}; Wu_e.y = 'z4';
-
-Mu=3000;wbc=10000;epsi1=0.01;
-% Wu0=tf([1 wbc/Mu],[epsi1 wbc]);
+Mu=2000; wbc=1e5; epsi1=0.01; 
 Wu0 = tf(1/Mu);
-Wu_v = blkdiag(Wu0,Wu0,Wu0);
-Wu_v.u = {'u12','u22','u32'}; Wu_v.y = 'z5';
-
+% Wu0=tf([1 wbc/Mu],[epsi1 wbc]); % It increases the hinfnorm(T)
+ 
 % String stability check
 Wz0 = tf(1);
-Wz = blkdiag(Wz0,Wz0,Wz0); 
-Wz.u = {'x1(2)', 'x2(2)', 'x3(2)'}; Wz.y = 'z6';
+
+% Define the regulated output
+We1 = blkdiag(We_e1,We_v);We1.u = {'y1(1)','y1(2)'}; We1.y = 'z1';
+We2 = blkdiag(We_e2,We_v);We2.u = {'y2(1)','y2(2)'}; We2.y = 'z2';
+We3 = blkdiag(We_e3,We_v);We3.u = {'y3(1)','y3(2)'}; We3.y = 'z3';
+Wu  = blkdiag(Wu0,Wu0,Wu0); Wu.u = {'u1','u2','u3'}; Wu.y = 'z4';
+Wz  = blkdiag(Wz0,Wz0,Wz0); Wz.u = {'x1(2)','x2(2)','x3(2)'}; Wz.y = 'z5';
 
 %% SUM blocks
 sum_y11 = sumblk('y1(1) = x1(1)');
@@ -118,16 +99,15 @@ sum_y31 = sumblk('y3(1) = x3(1)-x2(1)');
 sum_y32 = sumblk('y3(2) = x3(2)-x2(2)');
 
 %% Generate the interconnected system
-
 % Define the closed-loop system with tunable parameters
 T0 = connect(G1,G2,G3,...
     We1,We2,We3,...
-    Wu_e,Wu_v,...
+    Wu,...
     Wz,...
     K11,K12,K21,K22,K31,K32,...
     sum_y11,sum_y12,sum_y21,sum_y22,sum_y31,sum_y32,...
     sum_u1,sum_u2,sum_u3,...
-    {'v0'},{'z1','z2','z3','z4','z5','z6'})
+    {'v0'},{'z1','z2','z3','z4','z5'})
 
 %% Structured H infinity synthesis
 
@@ -173,13 +153,9 @@ S23 = T(6,1)/We_v;
 [sv4,~] = sigma(S23,w);
 v0_to_delta_v = [w; 20*log10(sv1) ;20*log10(sv2) ;20*log10(sv3); 20*log10(sv4)];
 
-Ke1 = T(7,1)/Wu1;
-Ke2 = T(8,1)/Wu2;
-Ke3 = T(9,1)/Wu3;
-
-Kv1 = T(10,1)/Wu0;
-Kv2 = T(11,1)/Wu0;
-Kv3 = T(12,1)/Wu0;
+Ku1 = T(7,1)/Wu0;
+Ku2 = T(8,1)/Wu0;
+Ku3 = T(9,1)/Wu0;
 
 % fig_loc = '/home/phatdo/01_master_mars/01_Master_Thesis/master_report_cacc/dat/';
 % fig_name = 'v0_to_delta_e_PF.txt';
@@ -210,13 +186,13 @@ legend('1/We_v','S21','S22','S23');title('From v0 to vi-vj');grid on
 
 % From v0 to ue_i
 subplot(223)
-bodemag(w,1/Wu1,1/Wu2,1/Wu3,Ke1,Ke2,Ke3)
-legend('1/Wu1','1/Wu2','1/Wu3','Ke1','Ke2','Ke3');title('From v0 to ue_i');grid on
+bodemag(w,1/Wu0,Ku1,Ku2,Ku3)
+legend('1/Wu','Ku1','Ku2','Ku3');title('From v0 to u_i');grid on
 
 % From v0 to uv_i
-subplot(224)
-bodemag(w,1/Wu0,Kv1,Kv2,Kv3)
-legend('1/Wu','Kv1','Kv2','Kv3');title('From v0 to uv_i');grid on
+% subplot(224)
+% bodemag(w,1/Wu0,Kv1,Kv2,Kv3)
+% legend('1/Wu','Kv1','Kv2','Kv3');title('From v0 to uv_i');grid on
 
 % String stability check
 % subplot(224)
@@ -228,19 +204,23 @@ legend('1/Wu','Kv1','Kv2','Kv3');title('From v0 to uv_i');grid on
 % bodemag(w,1/Wz0,ST0_1,ST1_2,ST2_3)
 % legend('1/Wz','ST1','ST2','ST2');title('String stability check'),grid on
 
-%% Config velocity profile
-% Velocity profile params
-v_ref0 = 0;
-% Define velocity periods
-dt = [10 5 20 10 20 5 10 15 0]';
-wp = tril(ones(length(dt)))*dt;
-accel = [1 0 1 0 -1 0 -0.5 0];
+%% Simulation parameters
 
-%% Time response
+% Simulation mode
+sim_mode = 1; % standard velocity profile
+% sim_mode = -1; % velocity with sin disturbance
 
-% Sim params
+% Init spacing errors
 e_init = [2 -1 -2];
 
+% Velocity profile params
+v_ref0 = 0;
+
+dt = [20 15 20 10 20 5 10 15 0]'; % Define velocity periods
+wp = tril(ones(length(dt)))*dt;
+accel = [1 0 -1 0 -1 0 1 0]; % Corresponding acceleration
+
+%% Time response
 sim("test_02_cacc_sim.slx")
 % 
 sim_time = tout;
@@ -276,13 +256,16 @@ lw = 1.0;
 % save(append(fig_loc, fig_name),'e_plot',"-ascii");
 
 %% Visualization
+xlim_max = 70;
+xlim_min = 15;
+
 figure('Position', [500 500 1500 900])
 subplot(221)
 plot(sim_time, v_0, ...
     sim_time, v_1, ...
     sim_time, v_2, ...
     sim_time, v_3, ...
-    LineWidth=lw); xlim([0 80]); %ylim([-22 26])
+    LineWidth=lw); xlim([xlim_min xlim_max]); %ylim([-22 26])
 % legend("car_0", "car_1", "car_2", "car_3");
 ylabel('v_i(m/s)')
 grid on
@@ -291,7 +274,7 @@ subplot(223)
 plot(sim_time, a_1, ...
     sim_time, a_2, ...
     sim_time, a_3, ...
-    LineWidth=lw); xlim([0 80]); %ylim([-15 15])
+    LineWidth=lw); xlim([xlim_min xlim_max]); ylim([-1.5 1.5])
 legend("a1", "a2", "a3");
 xlabel('t(s)')
 ylabel('a_i(m/s^2)')
@@ -301,8 +284,18 @@ subplot(222)
 plot(sim_time, e_1, ...
     sim_time, e_2, ...
     sim_time, e_3, ...
-    LineWidth=lw); xlim([0 80]); %ylim([-15 15])
+    LineWidth=lw); xlim([0 25]); %ylim([-15 15])
 legend("e1", "e2", "e3");
 xlabel('t(s)')
 ylabel('e_i(m)')
+grid on
+
+subplot(224)
+plot(sim_time, a_1, ...
+    sim_time, a_2, ...
+    sim_time, a_3, ...
+    LineWidth=lw); xlim([0 25]); ylim([-1 1])
+legend("a1", "a2", "a3");
+xlabel('t(s)')
+ylabel('a_i(m/s^2)')
 grid on
