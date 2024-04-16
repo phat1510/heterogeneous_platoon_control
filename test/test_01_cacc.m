@@ -15,7 +15,7 @@ close all;
 %% Plants
 % m1 = 1500; m2 = 2000; m3 = 2500; %kg
 m1 = 1460; m2 = 1460; m3 = 1460; %kg
-h = 0.8;
+h = 0.2;
 
 A = [0 -1;0 0];
 Bw = [1;0]; 
@@ -239,7 +239,7 @@ accel = [1 0 1 0 -1 0 -0.5 0];
 % Sim params
 e_init = [2 -1 -2];
 
-sim("cacc_test_01_sim.slx")
+sim("test_01_cacc_sim.slx")
 % 
 sim_time = tout;
 
