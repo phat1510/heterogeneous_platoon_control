@@ -47,7 +47,9 @@ G2 = ss(A,B2,C,D); G2.u = {'x1(2)','u2'}; G2.y = {'x2'};
 G3 = ss(A,B3,C,D); G3.u = {'x2(2)','u3'}; G3.y = {'x3'};
 
 %% Tunable gains
-Ke_min = 0.2*m1;
+coeff = 0.3;
+
+Ke_min = coeff*m1;
 Ke_max = Ke_min + 1;
 
 K11 = tunableGain('K11',1,1); K11.u = 'y1(1)'; K11.y = 'u11';
@@ -58,7 +60,7 @@ K11.Gain.Maximum = Ke_max;
 K12 = tunableGain('K12',0); K12.u = 'y1(2)'; K12.y = 'u12';
 sum_u1 = sumblk('u1=u11+u12');
 
-Ke_min = 0.2*m2;
+Ke_min = coeff*m2;
 Ke_max = Ke_min + 1;
 K21 = tunableGain('K21',0); K21.u = 'y2(1)'; K21.y = 'u21';
 K21.Gain.Free = 1;
@@ -68,7 +70,7 @@ K21.Gain.Maximum = Ke_max;
 K22 = tunableGain('K22',0); K22.u = 'y2(2)'; K22.y = 'u22';
 sum_u2 = sumblk('u2=u21+u22');
 
-Ke_min = 0.2*m3;
+Ke_min = coeff*m3;
 Ke_max = Ke_min + 1;
 K31 = tunableGain('K31',0); K31.u = 'y3(1)'; K31.y = 'u31';
 K31.Gain.Free = 1;
@@ -80,7 +82,7 @@ sum_u3 = sumblk('u3=u31+u32');
 
 %% Desired performance by weighting functions
 % Weighting function on ei
-Ms=1; wb=5; epsi=1e-5;
+Ms=1; wb=1; epsi=1e-5;
 We_e1=tf([1/Ms wb],[1 wb*epsi]);
 We_e2=We_e1;
 We_e3=We_e1;
@@ -192,8 +194,9 @@ vi_1_to_vi = [w; 20*log10(sv1) ;20*log10(sv2) ;20*log10(sv3); 20*log10(sv4)];
 Ts = 0.02;
 
 % Simulation mode
-sim_mode = 1; % standard velocity profile
-% sim_mode = -1; % velocity with sin disturbance
+% 1: standard velocity profile, -1: velocity with sin disturbance
+sim_mode = 1;
+dis_freq = 1;
 
 % Standstill distance
 lv = 4.5;
@@ -211,7 +214,7 @@ v_ref0 = 5;
 traction_accel = 0.5;
 bracking_accel = -0.5;
 
-dt = [40 15 30 10 20 5 10 15 0]'; % Define velocity periods
+dt = [40 15 30 10 100 5 10 15 0]'; % Define velocity periods
 wp = tril(ones(length(dt)))*dt;
 accel = [traction_accel 0 bracking_accel 0 bracking_accel 0 traction_accel 0]; %
 
@@ -276,11 +279,13 @@ subplot(224)
 bodemag(w,1/Wz0,ST0_1,ST1_2,ST2_3,'--')
 legend('1/Wz','ST1','ST2','ST2');title('String stability check'),grid on
 
+
+
+%% Plot - Time
 xlim_max = 100;
 xlim_min = 35;
 lw = 1.0;
 
-%% Plot - Time
 figure
 subplot(221)
 plot(sim_time, v_0, ...
@@ -317,9 +322,9 @@ plot(sim_time, a_1, ...
     sim_time, a_2, ...
     sim_time, a_3, ...
     LineWidth=lw); xlim([xlim_min xlim_max]); %ylim([-1.5 1.5])
-legend("a1", "a2", "a3");
+legend("F1", "F2", "F3");
 xlabel('t(s)')
-ylabel('a_i(m/s^2)')
+ylabel('F_i(N)')
 grid on
 
 %% Export data
